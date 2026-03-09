@@ -88,4 +88,65 @@ app.post('/api/skill', async (req, res) => {
     }
 });
 
+// ==========================================
+// SOUL MACHINES SKILLS API (WEBHOOK UFFICIALE)
+// ==========================================
+
+// 1. ENDPOINT EXECUTE (Obbligatorio: Elabora la conversazione ad ogni turno)
+app.post('/api/skill/execute', async (req, res) => {
+    try {
+        // La Skills API invia il testo trascritto nella proprietà 'text' del body
+        const userText = req.body.text || "";
+        console.log("🗣️ Musa ha sentito:", userText);
+
+        if (!userText) {
+            // Formato JSON rigoroso richiesto da SM (ExecuteResponse)
+            return res.json({ 
+                output: { text: "Scusa, non ho sentito bene. Puoi ripetere?" },
+                endConversation: true // Segnala a SM che la Skill ha finito di elaborare la risposta
+            });
+        }
+
+        // Chiamata a OpenAI (GPT-4o) - Usa max_completion_tokens al posto del deprecato max_tokens
+        const response = await axios.post('https://api.openai.com/v1/chat/completions', {
+            model: "gpt-4o",
+            messages: [
+                { role: "system", content: "Sei Musa, un assistente virtuale brillante, empatica e concisa." },
+                { role: "user", content: userText }
+            ]
+        }, {
+            headers: { 'Authorization': 'Bearer ' + process.env.OPENAI_API_KEY }
+        });
+
+        const replyText = response.data.choices[0].message.content;
+        console.log("🧠 ChatGPT risponde:", replyText);
+
+        // Risposta conforme alla documentazione ExecuteResponse
+        res.json({
+            output: { text: replyText },
+            endConversation: true
+        });
+        
+    } catch (e) {
+        console.error("Errore Skill GPT:", e.message);
+        res.json({ 
+            output: { text: "Ho un piccolo problema di connessione al mio server neurale." },
+            endConversation: true
+        });
+    }
+});
+
+// 2. ENDPOINT SESSION (Consigliato: chiamato da SM all'avvio della telecamera)
+app.post('/api/skill/session', (req, res) => {
+    console.log("🔄 Nuova sessione stabilita con Soul Machines");
+    // Risponde con 200 OK e un oggetto vuoto (SessionResponse) per confermare che siamo vivi
+    res.json({}); 
+});
+
+// 3. ENDPOINT INITIALIZE (Opzionale: chiamato al deploy del progetto)
+app.post('/api/skill/init', (req, res) => {
+    console.log("⚙️ Skill Inizializzata da DDNA Studio");
+    res.json({});
+});
+
 // JavaScript Document
