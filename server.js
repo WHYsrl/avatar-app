@@ -17,7 +17,6 @@ const server = app.listen(PORT, () => console.log(`🚀 Server HTTP in ascolto s
 // ==========================================
 // CERVELLO WEBSOCKET PER SOUL MACHINES
 // ==========================================
-// Agganciamo il server Websocket al server HTTP
 const wss = new WebSocketServer({ server });
 
 wss.on('connection', (ws) => {
@@ -30,21 +29,18 @@ wss.on('connection', (ws) => {
             // Filtriamo solo i messaggi in cui l'utente sta parlando
             if (data.name !== 'conversationRequest') return;
 
-            // RECUPERO TESTO CORRETTO: SM nasconde il testo dentro body.input
+            // RECUPERO TESTO
             const userText = data.body?.input?.text || data.body?.text || "";
             
-            if (!userText.trim()) {
-                console.log("⚠️ Ricevuto messaggio vuoto o di sistema, lo ignoro.");
-                return;
-            }
+            if (!userText.trim()) return;
 
             console.log("🗣️ Musa sente:", userText);
 
-            // Chiamata diretta a ChatGPT (Modello 4o)
+            // Chiamata a ChatGPT
             const response = await axios.post('https://api.openai.com/v1/chat/completions', {
                 model: "gpt-4o",
                 messages: [
-                    { role: "system", content: "Sei Musa, un assistente virtuale intelligente ed empatica. Rispondi in italiano, in modo colloquiale e senza usare liste puntate o formattazioni complesse." },
+                    { role: "system", content: "Sei Musa, un assistente virtuale intelligente ed empatica. Rispondi in italiano, in modo colloquiale e molto conciso. Niente liste puntate." },
                     { role: "user", content: userText }
                 ]
             }, {
@@ -54,13 +50,14 @@ wss.on('connection', (ws) => {
             const replyText = response.data.choices[0].message.content;
             console.log("🧠 GPT risponde:", replyText);
 
-            // Formattazione esatta richiesta dal protocollo Websocket di SM
+            // RISPOSTA A SOUL MACHINES CON IL ROUTING (L'indirizzo di ritorno!)
             const smResponse = {
                 category: "scene",
                 kind: "response",
                 name: "conversationResponse",
                 transaction: data.transaction,
                 body: {
+                    routing: data.body.routing, // <-- ECCO IL PEZZO MAGICO CHE MANCAVA
                     output: { text: replyText }
                 }
             };
