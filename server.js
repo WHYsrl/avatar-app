@@ -7,25 +7,27 @@ const cors = require('cors');
 const app = express();
 app.use(cors());
 
-// Risposta di cortesia per evitare che Render dia errore se apri il link nel browser
-app.get('/', (req, res) => res.send('Orchestration Server per Musa Attivo!'));
+// Pagina di cortesia per testare se il server è online
+app.get('/', (req, res) => res.send('Orchestrator Websocket Attivo!'));
 
 const PORT = process.env.PORT || 3000;
+// Avviamo il server HTTP base
 const server = app.listen(PORT, () => console.log(`🚀 Server HTTP in ascolto sulla porta ${PORT}`));
 
 // ==========================================
 // CERVELLO WEBSOCKET PER SOUL MACHINES
 // ==========================================
+// Agganciamo il server Websocket al server HTTP
 const wss = new WebSocketServer({ server });
 
 wss.on('connection', (ws) => {
-    console.log("🟢 SOUL MACHINES CONNESSO VIA WEBSOCKET!");
+    console.log("🟢 ORCHESTRATOR: Soul Machines connesso via Websocket!");
 
     ws.on('message', async (message) => {
         try {
             const data = JSON.parse(message);
 
-            // Soul Machines manda tanti messaggi di sistema. Ascoltiamo solo quando l'utente parla:
+            // Filtriamo solo i messaggi in cui l'utente sta parlando
             if (data.name !== 'conversationRequest') return;
 
             const userText = data.body.text;
@@ -33,11 +35,11 @@ wss.on('connection', (ws) => {
 
             if (!userText) return;
 
-            // Chiamata al nuovo modello OpenAI GPT-4o
+            // Chiamata diretta a ChatGPT (Modello 4o moderno)
             const response = await axios.post('https://api.openai.com/v1/chat/completions', {
                 model: "gpt-4o",
                 messages: [
-                    { role: "system", content: "Sei Musa, un assistente virtuale intelligente ed empatica. Rispondi in italiano, in modo conciso e colloquiale." },
+                    { role: "system", content: "Sei Musa, un assistente virtuale intelligente ed empatica. Rispondi in italiano, in modo colloquiale e senza liste puntate." },
                     { role: "user", content: userText }
                 ]
             }, {
@@ -47,12 +49,12 @@ wss.on('connection', (ws) => {
             const replyText = response.data.choices[0].message.content;
             console.log("🧠 GPT risponde:", replyText);
 
-            // Rispondiamo a Soul Machines nel suo rigido formato Websocket
+            // Formattazione esatta richiesta dal protocollo Websocket di SM
             const smResponse = {
                 category: "scene",
                 kind: "response",
                 name: "conversationResponse",
-                transaction: data.transaction, // Fondamentale restituire l'ID della transazione
+                transaction: data.transaction,
                 body: {
                     output: { text: replyText }
                 }
@@ -65,5 +67,5 @@ wss.on('connection', (ws) => {
         }
     });
 
-    ws.on('close', () => console.log("🔴 Connessione Websocket chiusa."));
+    ws.on('close', () => console.log("🔴 ORCHESTRATOR: Connessione chiusa."));
 });
