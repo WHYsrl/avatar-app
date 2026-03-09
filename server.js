@@ -11,14 +11,16 @@ app.use(express.json());
 // Proxy per Soul Machines
 app.post('/api/sm-key', async (req, res) => {
     try {
-        console.log("Richiesta Token a Soul Machines da Render...");
-        const response = await axios.post('https://api.soulmachines.com/v1/generate-jwt', {}, {
-            headers: { 
-                'Authorization': 'Bearer ' + process.env.SM_API_KEY,
-                'Origin': 'https://avatar.frystudio.it'
-            }
+        console.log("Richiesta Token a Soul Machines (.cloud) da Render...");
+        
+        // L'indirizzo e il formato CORRETTI richiesti da Soul Machines
+        const response = await axios.post('https://dh.soulmachines.cloud/api/jwt', {
+            apikey: process.env.SM_API_KEY
         });
-        res.json({ token: response.data.token });
+        
+        // SM restituisce l'oggetto con nome "jwt", noi lo mandiamo al sito come "token"
+        res.json({ token: response.data.jwt });
+        
     } catch (e) {
         console.error("ERRORE SM:", e.response ? e.response.data : e.message);
         res.status(500).json({ error: "Errore generazione token" });
