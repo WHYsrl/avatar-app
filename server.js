@@ -7,16 +7,11 @@ const cors = require('cors');
 const app = express();
 app.use(cors());
 
-// Pagina di cortesia per testare se il server è online
 app.get('/', (req, res) => res.send('Orchestrator Websocket per Musa Attivo!'));
 
 const PORT = process.env.PORT || 3000;
-// Avviamo il server HTTP base
 const server = app.listen(PORT, () => console.log(`🚀 Server HTTP in ascolto sulla porta ${PORT}`));
 
-// ==========================================
-// CERVELLO WEBSOCKET PER SOUL MACHINES
-// ==========================================
 const wss = new WebSocketServer({ server });
 
 wss.on('connection', (ws) => {
@@ -26,21 +21,23 @@ wss.on('connection', (ws) => {
         try {
             const data = JSON.parse(message);
 
-            // Filtriamo solo i messaggi in cui l'utente sta parlando
             if (data.name !== 'conversationRequest') return;
-
-            // RECUPERO TESTO
-            const userText = data.body?.input?.text || data.body?.text || "";
             
+            // LOG GIGANTE PER VEDERE ESATTAMENTE COSA CI CHIEDE SM
+            console.log("\n=================================");
+            console.log("📥 RICHIESTA IN ARRIVO DA SM:");
+            console.log(JSON.stringify(data, null, 2));
+            console.log("=================================\n");
+
+            const userText = data.body?.input?.text || data.body?.text || "";
             if (!userText.trim()) return;
 
             console.log("🗣️ Musa sente:", userText);
 
-            // Chiamata a ChatGPT
             const response = await axios.post('https://api.openai.com/v1/chat/completions', {
                 model: "gpt-4o",
                 messages: [
-                    { role: "system", content: "Sei Musa, un assistente virtuale intelligente ed empatica. Rispondi in italiano, in modo colloquiale e molto conciso. Niente liste puntate." },
+                    { role: "system", content: "Sei Musa, un assistente virtuale intelligente ed empatica. Rispondi in italiano in modo breve e cordiale." },
                     { role: "user", content: userText }
                 ]
             }, {
@@ -50,18 +47,21 @@ wss.on('connection', (ws) => {
             const replyText = response.data.choices[0].message.content;
             console.log("🧠 GPT risponde:", replyText);
 
-            // RISPOSTA A SOUL MACHINES CON IL ROUTING (L'indirizzo di ritorno!)
+            // RISPOSTA PURA AL 100% (Senza routing, solo l'essenziale che SM si aspetta)
             const smResponse = {
                 category: "scene",
                 kind: "response",
                 name: "conversationResponse",
-                transaction: data.transaction,
+                transaction: data.transaction, // Questo è il filo che lega domanda e risposta
                 body: {
-                    routing: data.body.routing, // <-- ECCO IL PEZZO MAGICO CHE MANCAVA
                     output: { text: replyText }
                 }
             };
             
+            console.log("📤 RISPOSTA INVIATA A SM:");
+            console.log(JSON.stringify(smResponse, null, 2));
+            console.log("=================================\n");
+
             ws.send(JSON.stringify(smResponse));
 
         } catch (e) {
