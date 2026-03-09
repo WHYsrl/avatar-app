@@ -8,7 +8,7 @@ const app = express();
 app.use(cors());
 
 // Pagina di cortesia per testare se il server è online
-app.get('/', (req, res) => res.send('Orchestrator Websocket Attivo!'));
+app.get('/', (req, res) => res.send('Orchestrator Websocket per Musa Attivo!'));
 
 const PORT = process.env.PORT || 3000;
 // Avviamo il server HTTP base
@@ -30,16 +30,21 @@ wss.on('connection', (ws) => {
             // Filtriamo solo i messaggi in cui l'utente sta parlando
             if (data.name !== 'conversationRequest') return;
 
-            const userText = data.body.text;
+            // RECUPERO TESTO CORRETTO: SM nasconde il testo dentro body.input
+            const userText = data.body?.input?.text || data.body?.text || "";
+            
+            if (!userText.trim()) {
+                console.log("⚠️ Ricevuto messaggio vuoto o di sistema, lo ignoro.");
+                return;
+            }
+
             console.log("🗣️ Musa sente:", userText);
 
-            if (!userText) return;
-
-            // Chiamata diretta a ChatGPT (Modello 4o moderno)
+            // Chiamata diretta a ChatGPT (Modello 4o)
             const response = await axios.post('https://api.openai.com/v1/chat/completions', {
                 model: "gpt-4o",
                 messages: [
-                    { role: "system", content: "Sei Musa, un assistente virtuale intelligente ed empatica. Rispondi in italiano, in modo colloquiale e senza liste puntate." },
+                    { role: "system", content: "Sei Musa, un assistente virtuale intelligente ed empatica. Rispondi in italiano, in modo colloquiale e senza usare liste puntate o formattazioni complesse." },
                     { role: "user", content: userText }
                 ]
             }, {
