@@ -1,152 +1,69 @@
 require('dotenv').config();
 const express = require('express');
+const { WebSocketServer } = require('ws');
 const axios = require('axios');
 const cors = require('cors');
 
 const app = express();
-// Permettiamo al tuo sito SiteGround di fare richieste a questo server
-app.use(cors({ origin: 'https://avatar.frystudio.it' })); 
-app.use(express.json());
+app.use(cors());
 
-// Proxy per Soul Machines
-app.post('/api/sm-key', async (req, res) => {
-    try {
-        console.log("Richiesta Token a Soul Machines (.cloud) da Render...");
-        
-        // L'indirizzo e il formato CORRETTI richiesti da Soul Machines
-        const response = await axios.post('https://dh.soulmachines.cloud/api/jwt', {
-            apikey: process.env.SM_API_KEY
-        });
-        
-        // SM restituisce l'oggetto con nome "jwt", noi lo mandiamo al sito come "token"
-        res.json({ token: response.data.jwt });
-        
-    } catch (e) {
-        console.error("ERRORE SM:", e.response ? e.response.data : e.message);
-        res.status(500).json({ error: "Errore generazione token" });
-    }
-});
+// Risposta di cortesia per evitare che Render dia errore se apri il link nel browser
+app.get('/', (req, res) => res.send('Orchestration Server per Musa Attivo!'));
 
-// Proxy per OpenAI
-app.post('/api/chat', async (req, res) => {
-    try {
-        const response = await axios.post('https://api.openai.com/v1/chat/completions', {
-            model: "gpt-4o",
-            messages: req.body.messages,
-            max_tokens: 500
-        }, {
-            headers: { 'Authorization': 'Bearer ' + process.env.OPENAI_API_KEY }
-        });
-        res.json({ reply: response.data.choices[0].message.content });
-    } catch (e) {
-        console.error("Errore OpenAI:", e.message);
-        res.status(500).json({ reply: "Errore connessione AI." });
-    }
-});
-
-// Su Render la porta viene assegnata dinamicamente
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`🚀 Server Render attivo sulla porta ${PORT}`));
-
-// --- NUOVA ROTTA: SOUL MACHINES CUSTOM SKILL WEBHOOK ---
-app.post('/api/skill', async (req, res) => {
-    try {
-        // Soul Machines invia il testo trascritto nel body. 
-        // A seconda della configurazione, si trova in req.body.text o req.body.input.text
-        const userText = req.body.text || (req.body.input && req.body.input.text) || "";
-        console.log("🗣️ Musa ha sentito:", userText);
-
-        if (!userText) {
-            return res.json({ output: { text: "Non ho capito bene, puoi ripetere?" } });
-        }
-
-        // Chiamata a OpenAI (Aggiornata e corretta)
-        const response = await axios.post('https://api.openai.com/v1/chat/completions', {
-            model: "gpt-4o",
-            // max_completion_tokens: 500, // Usa questo se vuoi limitare la risposta, NON max_tokens!
-            messages: [
-                { role: "system", content: "Sei Musa, un assistente virtuale intelligente e conciso. Rispondi in italiano." },
-                { role: "user", content: userText }
-            ]
-        }, {
-            headers: { 'Authorization': 'Bearer ' + process.env.OPENAI_API_KEY }
-        });
-
-        const replyText = response.data.choices[0].message.content;
-        console.log("🧠 ChatGPT risponde:", replyText);
-
-        // Risposta nel formato JSON richiesto da Soul Machines
-        res.json({
-            output: {
-                text: replyText
-            }
-        });
-        
-    } catch (e) {
-        console.error("Errore Skill GPT:", e.message);
-        res.json({ output: { text: "Scusa, ho un problema di connessione al mio cervello centrale." } });
-    }
-});
+const server = app.listen(PORT, () => console.log(`🚀 Server HTTP in ascolto sulla porta ${PORT}`));
 
 // ==========================================
-// SOUL MACHINES SKILLS API (WEBHOOK UFFICIALE)
+// CERVELLO WEBSOCKET PER SOUL MACHINES
 // ==========================================
+const wss = new WebSocketServer({ server });
 
-// 1. ENDPOINT EXECUTE (Obbligatorio: Elabora la conversazione ad ogni turno)
-app.post('/api/skill/execute', async (req, res) => {
-    try {
-        // La Skills API invia il testo trascritto nella proprietà 'text' del body
-        const userText = req.body.text || "";
-        console.log("🗣️ Musa ha sentito:", userText);
+wss.on('connection', (ws) => {
+    console.log("🟢 SOUL MACHINES CONNESSO VIA WEBSOCKET!");
 
-        if (!userText) {
-            // Formato JSON rigoroso richiesto da SM (ExecuteResponse)
-            return res.json({ 
-                output: { text: "Scusa, non ho sentito bene. Puoi ripetere?" },
-                endConversation: true // Segnala a SM che la Skill ha finito di elaborare la risposta
+    ws.on('message', async (message) => {
+        try {
+            const data = JSON.parse(message);
+
+            // Soul Machines manda tanti messaggi di sistema. Ascoltiamo solo quando l'utente parla:
+            if (data.name !== 'conversationRequest') return;
+
+            const userText = data.body.text;
+            console.log("🗣️ Musa sente:", userText);
+
+            if (!userText) return;
+
+            // Chiamata al nuovo modello OpenAI GPT-4o
+            const response = await axios.post('https://api.openai.com/v1/chat/completions', {
+                model: "gpt-4o",
+                messages: [
+                    { role: "system", content: "Sei Musa, un assistente virtuale intelligente ed empatica. Rispondi in italiano, in modo conciso e colloquiale." },
+                    { role: "user", content: userText }
+                ]
+            }, {
+                headers: { 'Authorization': 'Bearer ' + process.env.OPENAI_API_KEY }
             });
+
+            const replyText = response.data.choices[0].message.content;
+            console.log("🧠 GPT risponde:", replyText);
+
+            // Rispondiamo a Soul Machines nel suo rigido formato Websocket
+            const smResponse = {
+                category: "scene",
+                kind: "response",
+                name: "conversationResponse",
+                transaction: data.transaction, // Fondamentale restituire l'ID della transazione
+                body: {
+                    output: { text: replyText }
+                }
+            };
+            
+            ws.send(JSON.stringify(smResponse));
+
+        } catch (e) {
+            console.error("❌ Errore GPT:", e.message);
         }
+    });
 
-        // Chiamata a OpenAI (GPT-4o) - Usa max_completion_tokens al posto del deprecato max_tokens
-        const response = await axios.post('https://api.openai.com/v1/chat/completions', {
-            model: "gpt-4o",
-            messages: [
-                { role: "system", content: "Sei Musa, un assistente virtuale brillante, empatica e concisa." },
-                { role: "user", content: userText }
-            ]
-        }, {
-            headers: { 'Authorization': 'Bearer ' + process.env.OPENAI_API_KEY }
-        });
-
-        const replyText = response.data.choices[0].message.content;
-        console.log("🧠 ChatGPT risponde:", replyText);
-
-        // Risposta conforme alla documentazione ExecuteResponse
-        res.json({
-            output: { text: replyText },
-            endConversation: true
-        });
-        
-    } catch (e) {
-        console.error("Errore Skill GPT:", e.message);
-        res.json({ 
-            output: { text: "Ho un piccolo problema di connessione al mio server neurale." },
-            endConversation: true
-        });
-    }
+    ws.on('close', () => console.log("🔴 Connessione Websocket chiusa."));
 });
-
-// 2. ENDPOINT SESSION (Consigliato: chiamato da SM all'avvio della telecamera)
-app.post('/api/skill/session', (req, res) => {
-    console.log("🔄 Nuova sessione stabilita con Soul Machines");
-    // Risponde con 200 OK e un oggetto vuoto (SessionResponse) per confermare che siamo vivi
-    res.json({}); 
-});
-
-// 3. ENDPOINT INITIALIZE (Opzionale: chiamato al deploy del progetto)
-app.post('/api/skill/init', (req, res) => {
-    console.log("⚙️ Skill Inizializzata da DDNA Studio");
-    res.json({});
-});
-
-// JavaScript Document
