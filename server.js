@@ -22,18 +22,13 @@ wss.on('connection', (ws) => {
             const data = JSON.parse(message);
 
             if (data.name !== 'conversationRequest') return;
-            
-            // LOG GIGANTE PER VEDERE ESATTAMENTE COSA CI CHIEDE SM
-            console.log("\n=================================");
-            console.log("📥 RICHIESTA IN ARRIVO DA SM:");
-            console.log(JSON.stringify(data, null, 2));
-            console.log("=================================\n");
 
             const userText = data.body?.input?.text || data.body?.text || "";
             if (!userText.trim()) return;
 
             console.log("🗣️ Musa sente:", userText);
 
+            // Chiamata a ChatGPT
             const response = await axios.post('https://api.openai.com/v1/chat/completions', {
                 model: "gpt-4o",
                 messages: [
@@ -47,20 +42,22 @@ wss.on('connection', (ws) => {
             const replyText = response.data.choices[0].message.content;
             console.log("🧠 GPT risponde:", replyText);
 
-            // RISPOSTA CORRETTA AL 100% (kind: "event" e personaId)
+            // ==========================================
+            // IL PACCHETTO UFFICIALE SOUL MACHINES
+            // ==========================================
             const smResponse = {
                 category: "scene",
-                kind: "event",
+                kind: "request", // <-- ECCO IL SEGRETO! Deve essere un "comando/richiesta" all'avatar
                 name: "conversationResponse",
+                transaction: null, // Comando diretto, non aspetta conferme tecniche
                 body: {
-                    personaId: data.body?.personaId || "1",
+                    personaId: 1, // L'ID dell'avatar è sempre 1 per le connessioni standard
                     output: { text: replyText }
                 }
             };
             
-            console.log("📤 RISPOSTA INVIATA A SM:");
+            console.log("📤 COMANDO INVIATO A MUSA:");
             console.log(JSON.stringify(smResponse, null, 2));
-            console.log("=================================\n");
 
             ws.send(JSON.stringify(smResponse));
 
