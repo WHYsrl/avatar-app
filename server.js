@@ -10,12 +10,29 @@ app.use(cors());
 app.get('/', (req, res) => res.send('Orchestrator Websocket per Musa (GPT-5-Nano) Attivo!'));
 
 const PORT = process.env.PORT || 3000;
-const server = app.listen(PORT, () => console.log(`ðŸš€ Server HTTP in ascolto sulla porta ${PORT}`));
+const server = app.listen(PORT, () => console.log(`🚀 Server HTTP in ascolto sulla porta ${PORT}`));
 
 // ==========================================
-// CONFIGURAZIONE IDENTITÃ€ E CONOSCENZA DI MUSA
+// CONFIGURAZIONE IDENTITÀ E CONOSCENZA DI MUSA
 // ==========================================
 const MUSA_SYSTEM_PROMPT = `
+Sei Musa, un'amichevole ed esperta guida del Museo del Design dell'ADI (Associazione per il Disegno Industriale) a Milano.
+Il tuo ruolo è accogliere i giovani visitatori, guidarli e rispondere alle loro domande, facendoli appassionare al design.
+
+STILE E COMPORTAMENTO (TASSATIVO):
+- Il tuo tono deve essere appassionato, informato e di grande ispirazione.
+- Le tue risposte devono essere prettamente CONVERSAZIONALI. Parla come se stessi dialogando a voce.
+- Punta a risposte brevi, di circa 100 parole.
+- DIVIETO ASSOLUTO: Non usare MAI asterischi, elenchi puntati o numerati, grassetti o markdown.
+- NUMERI: Quando scrivi cifre oltre il mille, NON USARE virgole o punti per separare le migliaia (scrivi 1000 e non 1.000).
+- Usa le lettere accentate per indicare come vanno pronunciate correttamente parole ambigue.
+- Non proporre di mostrare oggetti o altro (non hai uno schermo da mostrare).
+- REGOLA SPECIALE: Dopo tre risposte date all'utente, saluta e chiudi la conversazione augurando una piacevole prosecuzione della visita nel museo.
+
+LIMITI DI SICUREZZA (DO NOT TALK ABOUT):
+- Rifiutati cortesemente di rispondere a tutto ciò che non riguarda il design.
+- Non parlare mai di: parolacce, droghe, nazismo, razzismo, politica.
+
 Sei Musa, un'amichevole ed esperta guida del Museo del Design dell'ADI (Associazione per il Design Industriale) a Milano.
 Il tuo ruolo Ã¨ accogliere i giovani visitatori, guidarli e rispondere alle loro domande, facendoli appassionare al design.
 Sei una guida informata e coinvolgente, progettata per fornire informazioni sulla storia del museo, sugli oggetti esposti, sul premio Compasso d'Oro e sui loro designer. Mantieni le tue risposte chiare e interattive. Punta a risposte conversazionali di circa 100 parole senza mai usare asterischi, elenchi puntati o numerati. Quando scrivi i numeri non usare virgole o punti per separare le migliaia. Quando usi parole che possono avere pronuncia ambigua, scrivi usando le lettere accentante per indicare come vanno pronunciate correttamente. Non proporre di mostrare oggetti o altri. Dopo tre risposte saluta e chiudi la conversazione augurando una piacevole prosecuzione della visita nel museo.
@@ -839,7 +856,6 @@ ADI Design Museum presenta "Il design entra nella storia", una video installazio
 Il video e un cortometraggio di animazione che riflette sulla stretta relazione tra la creativita e la Storia, inserendo l'atto creativo nel contesto socio-economico che l'ha generato. In Italia, nel periodo che va dalla fine degli anni '20 ai primi anni '50, pur segnato dalle due guerre mondiali, sono successe tante cose. E nata Cinecitta, ha inaugurato l'Esposizione della Triennale, gli elettrodomestici sono arrivati nelle case degli italiani, la moda ha mosso i primi passi, c'e stato il boom dei trasporti...
 Se dovessimo riordinare, come in un album fotografico, le immagini di quegli anni, ci troveremmo a osservare una carrellata di eventi grandi e piccoli, alcuni apparentemente ordinari, altri incredibilmente rivoluzionari.
 Queste immagini, queste fotografie d'archivio, scorrono sullo schermo accompagnate da una musica e da una serie di suoni che sembrano riportarle in vita. Sopra questa "tela" ideale appare una linea bianca: il pensiero del designer, dell'architetto, che trasforma e dialoga con gli eventi, con i cambiamenti. E, nel farlo, "gioca" con le immagini della Storia che scorrono sullo sfondo, interagendo con loro fino ad assumere le forme che riconosciamo come iconiche del design quegli anni.
-
 `;
 
 // ==========================================
@@ -848,11 +864,12 @@ Queste immagini, queste fotografie d'archivio, scorrono sullo schermo accompagna
 const wss = new WebSocketServer({ server });
 
 wss.on('connection', (ws) => {
-    console.log("ðŸŸ¢ ORCHESTRATOR: Connessione stabilita con un visitatore!");
+    console.log("🟢 ORCHESTRATOR: Connessione stabilita con un visitatore!");
     
     // Memoria a breve termine specifica per questa connessione
+    // NOTA API 2026: 'system' è deprecato, usiamo 'developer' per le istruzioni di base
     let chatHistory = [
-        { role: "system", content: MUSA_SYSTEM_PROMPT }
+        { role: "developer", content: MUSA_SYSTEM_PROMPT }
     ];
 
     ws.on('message', async (message) => {
@@ -860,10 +877,9 @@ wss.on('connection', (ws) => {
             const data = JSON.parse(message);
             if (data.name !== 'conversationRequest') return;
 
-            // 1. GESTIONE DEL MESSAGGIO DI BENVENUTO (Welcome Message)
-            // Quando la telecamera si accende, SM manda un evento "init"
+            // 1. GESTIONE DEL MESSAGGIO DI BENVENUTO
             if (data.body?.optionalArgs?.kind === "init") {
-                console.log("ðŸ‘‹ Invio messaggio di benvenuto a Musa.");
+                console.log("👋 Invio messaggio di benvenuto a Musa.");
                 const welcomeMsg = "Benvenuti al Museo del Design, sono qui per rispondere alle vostre domande.";
                 chatHistory.push({ role: "assistant", content: welcomeMsg });
                 
@@ -877,23 +893,22 @@ wss.on('connection', (ws) => {
             const userText = data.body?.input?.text || data.body?.text || "";
             if (!userText.trim()) return;
 
-            console.log("ðŸ—£ï¸ Visitatore chiede:", userText);
+            console.log("🗣️ Visitatore chiede:", userText);
             chatHistory.push({ role: "user", content: userText });
 
-            // 3. CHIAMATA A GPT-5-NANO
+            // 3. CHIAMATA A GPT-5-NANO (Standard Marzo 2026)
             const response = await axios.post('https://api.openai.com/v1/chat/completions', {
-                model: "gpt-5-nano", // Modello aggiornato 2026
+                model: "gpt-5-nano",
                 messages: chatHistory,
-                temperature: 0.2, // Corrisponde a "Stick to the facts"
-                max_completion_tokens: 250 // Corrisponde a circa 800 caratteri / 100 parole
+                max_completion_tokens: 250 // Sostituisce il deprecato max_tokens
+                // Rimosso il parametro 'temperature' per piena compatibilità
             }, {
                 headers: { 'Authorization': 'Bearer ' + process.env.OPENAI_API_KEY }
             });
 
             let replyText = response.data.choices[0].message.content;
-            console.log("ðŸ§  Musa (GPT) risponde:", replyText);
+            console.log("🧠 Musa (GPT) risponde:", replyText);
 
-            // Salviamo la risposta in memoria per il conteggio dei turni
             chatHistory.push({ role: "assistant", content: replyText });
 
             // 4. INVIO DELLA RISPOSTA A SOUL MACHINES
@@ -911,9 +926,9 @@ wss.on('connection', (ws) => {
             ws.send(JSON.stringify(smResponse));
 
         } catch (e) {
-            console.error("âŒ Errore GPT:", e.message);
+            // Un log più specifico per diagnosticare eventuali nuovi errori API
+            console.error("❌ Errore GPT:", e.response ? JSON.stringify(e.response.data) : e.message);
             
-            // Gestione dell'Error Message come da impostazioni SM
             const errorMsg = "Purtroppo non posso rispondere, a causa di un problema di connessione temporaneo.";
             ws.send(JSON.stringify({
                 category: "scene", kind: "request", name: "conversationResponse", transaction: null,
@@ -922,5 +937,5 @@ wss.on('connection', (ws) => {
         }
     });
 
-    ws.on('close', () => console.log("ðŸ”´ ORCHESTRATOR: Il visitatore ha chiuso la connessione. Memoria resettata."));
+    ws.on('close', () => console.log("🔴 ORCHESTRATOR: Il visitatore ha chiuso la connessione. Memoria resettata."));
 });// JavaScript Document
