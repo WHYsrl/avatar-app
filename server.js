@@ -621,10 +621,11 @@ wss.on('connection', (ws) => {
             console.log("🗣️ Visitatore chiede:", userText);
             chatHistory.push({ role: "user", content: userText });
 
+// 3. CHIAMATA A GPT-5-MINI (Ottimizzato per ultra-bassa latenza)
             const response = await axios.post('https://api.openai.com/v1/chat/completions', {
-                model: "gpt-5-nano",
+                model: "gpt-5-mini", // Il modello reattivo di punta del 2026
                 messages: chatHistory,
-                max_completion_tokens: 2000
+                max_completion_tokens: 800 // Riduciamo il limite per forzare un output immediato
             }, {
                 headers: { 'Authorization': 'Bearer ' + process.env.OPENAI_API_KEY }
             });
