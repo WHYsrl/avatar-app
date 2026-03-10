@@ -47,13 +47,13 @@ wss.on('connection', (ws) => {
             const replyText = response.data.choices[0].message.content;
             console.log("🧠 GPT risponde:", replyText);
 
-            // RISPOSTA PURA AL 100% (Senza routing, solo l'essenziale che SM si aspetta)
+            // RISPOSTA CORRETTA AL 100% (kind: "event" e personaId)
             const smResponse = {
                 category: "scene",
-                kind: "response",
+                kind: "event",
                 name: "conversationResponse",
-                transaction: data.transaction, // Questo è il filo che lega domanda e risposta
                 body: {
+                    personaId: data.body?.personaId || "1",
                     output: { text: replyText }
                 }
             };
