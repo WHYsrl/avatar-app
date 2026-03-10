@@ -896,20 +896,42 @@ wss.on('connection', (ws) => {
             console.log("🗣️ Visitatore chiede:", userText);
             chatHistory.push({ role: "user", content: userText });
 
-            // 3. CHIAMATA A GPT-5-NANO (Standard Marzo 2026)
+        // Nuovi modelli 2026: usiamo il ruolo 'developer' al posto del vecchio 'system'
+    let chatHistory = [
+        { role: "developer", content: MUSA_SYSTEM_PROMPT }
+    ];
+
+    ws.on('message', async (message) => {
+        // ... (gestione del benvenuto) ...
+
+        try {
+            // ... (recupero userText) ...
+            
+            // 3. CHIAMATA A GPT-5-NANO (Corretta per modelli di ragionamento)
             const response = await axios.post('https://api.openai.com/v1/chat/completions', {
                 model: "gpt-5-nano",
                 messages: chatHistory,
-                max_completion_tokens: 250 // Sostituisce il deprecato max_tokens
-                // Rimosso il parametro 'temperature' per piena compatibilità
+                // Aumentiamo i token per permettere la "Chain of Thought" invisibile
+                max_completion_tokens: 2000 
+                // N.B. La 'temperature' viene omessa perché i modelli di ragionamento 
+                // gestiscono l'oggettività internamente.
             }, {
                 headers: { 'Authorization': 'Bearer ' + process.env.OPENAI_API_KEY }
             });
 
-            let replyText = response.data.choices[0].message.content;
+            let replyText = response.data.choices[0].message.content || "";
+            
+            // Rete di sicurezza
+            if (!replyText.trim()) {
+                console.log("⚠️ OpenAI ha consumato i token senza produrre output verbale.");
+                replyText = "Perdona l'attesa, stavo riflettendo sulle collezioni. Puoi ripetermi la domanda?";
+            }
+
             console.log("🧠 Musa (GPT) risponde:", replyText);
 
             chatHistory.push({ role: "assistant", content: replyText });
+            
+            // ... (invio smResponse) ...
 
             // 4. INVIO DELLA RISPOSTA A SOUL MACHINES
             const smResponse = {
