@@ -621,11 +621,11 @@ wss.on('connection', (ws) => {
             console.log("🗣️ Visitatore chiede:", userText);
             chatHistory.push({ role: "user", content: userText });
 
-// 3. CHIAMATA A GPT-5-MINI (Ottimizzato per ultra-bassa latenza)
+// IL TURBO 2026: Modello appena rilasciato per massima fluidità vocale
             const response = await axios.post('https://api.openai.com/v1/chat/completions', {
-                model: "gpt-5-mini", // Il modello reattivo di punta del 2026
+                model: "gpt-5.3-chat-latest", // La nuovissima belva di OpenAI per il tempo reale
                 messages: chatHistory,
-                max_completion_tokens: 2000 // Riduciamo il limite per forzare un output immediato
+                max_completion_tokens: 500 // Manteniamo il limite stretto per forzare la velocità
             }, {
                 headers: { 'Authorization': 'Bearer ' + process.env.OPENAI_API_KEY }
             });
