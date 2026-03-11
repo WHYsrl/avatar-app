@@ -625,7 +625,7 @@ wss.on('connection', (ws) => {
             const response = await axios.post('https://api.openai.com/v1/chat/completions', {
                 model: "gpt-5-mini", // Il modello reattivo di punta del 2026
                 messages: chatHistory,
-                max_completion_tokens: 800 // Riduciamo il limite per forzare un output immediato
+                max_completion_tokens: 2000 // Riduciamo il limite per forzare un output immediato
             }, {
                 headers: { 'Authorization': 'Bearer ' + process.env.OPENAI_API_KEY }
             });
