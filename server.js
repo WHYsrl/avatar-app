@@ -72,10 +72,13 @@ wss.on('connection', (ws) => {
                         systemInstruction: MUSA_SYSTEM_PROMPT
                     });
 
-                    const chat = model.startChat({
-                        history: chatHistory,
-                        generationConfig: { maxOutputTokens: 150, temperature: 0.1 }
-                    });
+                  const chat = model.startChat({
+    history: chatHistory,
+    generationConfig: { 
+        maxOutputTokens: 800, // Diamo ossigeno a Musa per finire le frasi!
+        temperature: 0.1 
+    }
+});
 
                     const result = await chat.sendMessage(userText);
                     replyText = result.response.text();
