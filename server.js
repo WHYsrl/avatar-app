@@ -5,114 +5,109 @@ const fs = require('fs');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 
 const app = express();
-app.get('/', (req, res) => res.send('Orchestrator Websocket per Musa (Gemini Flash) Attivo!'));
+app.get('/', (req, res) => res.send('Orchestrator Musa con Fallback e ADI_fulltext Attivo!'));
 
 const PORT = process.env.PORT || 3000;
 const server = app.listen(PORT, () => console.log(`🚀 Server HTTP in ascolto sulla porta ${PORT}`));
 
-// Inizializza l'SDK di Gemini
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 // ==========================================
-// PREPARAZIONE DELL'ENCICLOPEDIA
+// CARICAMENTO CONOSCENZA (FILE CORRETTO)
 // ==========================================
 let adiKnowledgeBase = "";
 try {
-    adiKnowledgeBase = fs.readFileSync('ADI_Fulltext.txt', 'utf8');
-    console.log("📚 Volume ADI (3MB) caricato in memoria con successo!");
+    // CORREZIONE: Nome file aggiornato a ADI_fulltext.txt
+    adiKnowledgeBase = fs.readFileSync('ADI_fulltext.txt', 'utf8');
+    console.log("📚 Volume ADI (ADI_fulltext.txt) caricato correttamente!");
 } catch (err) {
-    console.error("⚠️ Errore: File ADI_Fulltext.txt non trovato. Assicurati di averlo caricato su GitHub.");
+    console.error("⚠️ Errore fatale: File ADI_fulltext.txt non trovato su GitHub!");
 }
 
 const MUSA_SYSTEM_PROMPT = `
-Sei Musa, un'amichevole ed esperta guida del Museo del Design dell'ADI a Milano.
-Rispondi in modo COLLOQUIALE, ISTANTANEO e CONCISO.
+Sei Musa, guida del Museo del Design ADI. 
+Rispondi in modo COLLOQUIALE e BREVE (max 2-3 frasi).
+NO markdown, NO asterischi, NO elenchi. Numeri senza punti o virgole.
+Usa solo queste info: \n\n${adiKnowledgeBase}`;
 
-REGOLA D'ORO PER LA VOCE:
-- Le tue risposte devono essere pensate per essere pronunciate a voce (massimo 2-3 frasi brevi).
-- DIVIETO ASSOLUTO: Non usare MAI asterischi, elenchi puntati o numerati, grassetti o markdown. Scrivi i numeri in lettere o senza virgole (es. 1000).
-- Usa ESCLUSIVAMENTE il documento fornito per rispondere. Se non sai qualcosa o non è nel documento, di' semplicemente: "Purtroppo non ho questa informazione nei miei archivi".
+// Lista dei modelli in ordine di priorità (Fallback)
+const MODEL_PRIORITY = [
+    "gemini-2.5-flash",
+    "gemini-2.5-flash-lite",
+    "gemini-2.0-flash"
+];
 
-ECCO L'INTERO ARCHIVIO DEL MUSEO ADI DA CUI ATTINGERE:
-\n\n${adiKnowledgeBase}
-`;
-
-// ==========================================
-// CERVELLO WEBSOCKET
-// ==========================================
 const wss = new WebSocketServer({ server });
 
 wss.on('connection', (ws) => {
-    console.log("🟢 ORCHESTRATOR: Connessione stabilita con un visitatore!");
-
-// Inizializza il modello Flash con il contesto gigante
-    const model = genAI.getGenerativeModel({
-        model: "gemini-2.5-flash", // LO STANDARD ATTUALE (MAGGIO 2026)
-        systemInstruction: MUSA_SYSTEM_PROMPT,
-    });
-
-    // Inizializziamo la chat per mantenere la memoria della conversazione
-    const chat = model.startChat({
-        generationConfig: {
-            maxOutputTokens: 150, // Forza risposte brevi e fulminee
-            temperature: 0.1,     // Molto bassa: massima fedeltà storica ai dati ADI
-        }
-    });
+    console.log("🟢 Connessione stabilita con il visitatore!");
+    
+    let chatHistory = [];
 
     ws.on('message', async (message) => {
         try {
             const data = JSON.parse(message);
             if (data.name !== 'conversationRequest') return;
 
-            // BENVENUTO
             if (data.body?.optionalArgs?.kind === "init") {
-                const welcomeMsg = "Benvenuti al Museo del Design! Sono Musa, cosa volete scoprire oggi?";
                 return ws.send(JSON.stringify({
                     category: "scene", kind: "request", name: "conversationResponse", transaction: data.transaction,
-                    body: { personaId: 1, output: { text: welcomeMsg } }
+                    body: { personaId: 1, output: { text: "Benvenuti al Museo del Design! Cosa desiderate scoprire oggi?" } }
                 }));
             }
 
             const userText = data.body?.input?.text || data.body?.text || "";
             if (!userText.trim()) return;
 
-            console.log("🗣️ Visitatore chiede:", userText);
+            console.log("🗣️ Utente:", userText);
 
-            // CHIAMATA A GEMINI FLASH
-            const result = await chat.sendMessage(userText);
-            let replyText = result.response.text();
-            
-            // Rete di sicurezza anti-markdown
-            replyText = replyText.replace(/\*/g, '').trim();
+            let replyText = "";
+            let success = false;
 
-            if (!replyText) {
-                replyText = "Perdona l'attesa. Puoi ripetermi la domanda?";
+            // Logica di Fallback
+            for (const modelName of MODEL_PRIORITY) {
+                try {
+                    const model = genAI.getGenerativeModel({
+                        model: modelName,
+                        systemInstruction: MUSA_SYSTEM_PROMPT
+                    });
+
+                    const chat = model.startChat({
+                        history: chatHistory,
+                        generationConfig: { maxOutputTokens: 150, temperature: 0.1 }
+                    });
+
+                    const result = await chat.sendMessage(userText);
+                    replyText = result.response.text();
+                    
+                    success = true;
+                    chatHistory.push({ role: "user", parts: [{ text: userText }] });
+                    chatHistory.push({ role: "model", parts: [{ text: replyText }] });
+                    console.log(`✅ Risposta ottenuta con successo da: ${modelName}`);
+                    break; 
+
+                } catch (err) {
+                    console.warn(`⚠️ Modello ${modelName} non disponibile, provo il fallback...`);
+                }
             }
 
-            console.log("🧠 Musa (Gemini) risponde:", replyText);
+            if (!success) {
+                replyText = "Chiedo scusa, i miei sistemi di ricerca sono un po' lenti oggi. Potete riprovare tra un istante?";
+            }
 
-            // INVIO A SOUL MACHINES
-            const smResponse = {
-                category: "scene",
-                kind: "request", 
-                name: "conversationResponse",
-                transaction: null, 
-                body: {
-                    personaId: 1, 
-                    output: { text: replyText }
-                }
-            };
-            
-            ws.send(JSON.stringify(smResponse));
+            // Pulizia finale per l'avatar
+            replyText = replyText.replace(/\*/g, '').trim();
+            console.log("🧠 Musa risponde:", replyText);
 
-        } catch (e) {
-            console.error("❌ Errore Gemini:", e.message);
             ws.send(JSON.stringify({
                 category: "scene", kind: "request", name: "conversationResponse", transaction: null,
-                body: { personaId: 1, output: { text: "Scusa, sto consultando i miei archivi, ci riproviamo tra un attimo?" } }
+                body: { personaId: 1, output: { text: replyText } }
             }));
+
+        } catch (e) {
+            console.error("❌ Errore generale nella gestione del messaggio:", e.message);
         }
     });
 
-    ws.on('close', () => console.log("🔴 ORCHESTRATOR: Connessione chiusa."));
+    ws.on('close', () => console.log("🔴 Connessione chiusa."));
 });
