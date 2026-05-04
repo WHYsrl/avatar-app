@@ -2,15 +2,15 @@ require('dotenv').config();
 const express = require('express');
 const { WebSocketServer } = require('ws');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
-// IMPORTIAMO IL GESTORE FILE DI GOOGLE
 const { GoogleAIFileManager } = require("@google/generative-ai/server");
 
 const app = express();
-app.get('/', (req, res) => res.send('Orchestrator Musa con File API, Fillers e Anti-Taglio Attivo!'));
+app.get('/', (req, res) => res.send('Orchestrator Musa (File API + Prompt Evoluto) Attivo e Funzionante!'));
 
 const PORT = process.env.PORT || 3000;
 const server = app.listen(PORT, () => console.log(`🚀 Server HTTP in ascolto sulla porta ${PORT}`));
 
+// Inizializzazione SDK
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 const fileManager = new GoogleAIFileManager(process.env.GEMINI_API_KEY);
 
@@ -22,14 +22,14 @@ let adiFileMimeType = null;
 
 async function initKnowledgeBase() {
     try {
-        console.log("⏳ Caricamento del volume ADI (ADI_fulltext.txt) sui server Google...");
+        console.log("⏳ Caricamento del volume ADI (ADI_fulltext.txt) sui server Google per latenza ultra-bassa...");
         const uploadResult = await fileManager.uploadFile("ADI_fulltext.txt", {
             mimeType: "text/plain",
             displayName: "Enciclopedia ADI",
         });
         adiFileUri = uploadResult.file.uri;
         adiFileMimeType = uploadResult.file.mimeType;
-        console.log(`✅ File caricato con successo! URI: ${adiFileUri}`);
+        console.log(`✅ File caricato con successo nella Cache! URI: ${adiFileUri}`);
     } catch (err) {
         console.error("⚠️ Errore fatale caricamento file su Google:", err.message);
     }
@@ -37,14 +37,19 @@ async function initKnowledgeBase() {
 // Avviamo il caricamento appena si accende il server
 initKnowledgeBase();
 
-const MUSA_SYSTEM_PROMPT = "TASSATIVO: RISPOSTA BREVE. MASSIMO 5 FRASI E 100 PAROLE. SEI UN ASSISTENTE VOCALE VELOCE. Sei Musa, guida empatica del Museo del Design ADI a Milano. Rispondi con entusiasmo e tono colloquiale, come in una conversazione reale. Sii fluido e discorsivo. Se un'informazione manca, scusati dicendo che il dettaglio non e disponibile. Se la risposta e parziale, usa frasi come ti cito alcuni esempi. REGOLE TECNICHE: Usa solo testo puro. DIVIETO ASSOLUTO di asterischi, elenchi puntati, grassetti o markdown. Per i numeri non usare separatori delle migliaia: scrivi 1000 e non 1.000. Usa lettere accentate per la corretta fonetica. Non proporre foto o immagini. Il modello 9090 si scrive sempre novantanovanta.";
+// ==========================================
+// PROMPT DI SISTEMA (FONETICO E COMPORTAMENTALE)
+// ==========================================
+const MUSA_SYSTEM_PROMPT = `TASSATIVO: RISPOSTA BREVE. MASSIMO 5 FRASI E 100 PAROLE. SEI UN ASSISTENTE VOCALE VELOCE. Sei Musa, guida empatica del Museo del Design ADI a Milano. Rispondi con entusiasmo e tono colloquiale, come in una conversazione reale. Sii fluido e discorsivo. Se un'informazione manca, scusati dicendo che il dettaglio non è disponibile. Se la risposta è parziale, usa frasi come "ti cito alcuni esempi". REGOLE TECNICHE: Usa solo testo puro. DIVIETO ASSOLUTO di asterischi, elenchi puntati, grassetti o markdown. Per i numeri non usare separatori delle migliaia: scrivi 1000 e non 1.000. Usa lettere accentate per la corretta fonetica. Non proporre foto o immagini. Il modello 9090 si scrive sempre novantanovanta.`;
 
+// Lista dei modelli (Fallback)
 const MODEL_PRIORITY = [
     "gemini-3-flash-preview",
     "gemini-3.1-flash-lite-preview",
     "gemini-2.5-flash"
 ];
 
+// Frasi per prendere tempo
 const FRASI_ATTESA = [
     "Ottima domanda, fammi consultare l'archivio...",
     "Un attimo solo, verifico subito nei miei documenti...",
@@ -52,24 +57,27 @@ const FRASI_ATTESA = [
     "Vado a pescare questo dettaglio nella mia memoria..."
 ];
 
+// ==========================================
+// MOTORE WEBSOCKET
+// ==========================================
 const wss = new WebSocketServer({ server });
 
 wss.on('connection', (ws) => {
     console.log("🟢 Connessione stabilita con il visitatore!");
     
-    // Inizializziamo la chat passando il file caricato su Google come primissimo messaggio
+    // Inizializziamo la chat. Il file caricato su Google diventa il primo messaggio
     let chatHistory = [];
     if (adiFileUri) {
         chatHistory.push({
             role: "user",
             parts: [
                 { fileData: { mimeType: adiFileMimeType, fileUri: adiFileUri } },
-                { text: "Questo è l'archivio completo. Usalo per tutte le prossime risposte." }
+                { text: "Questo è l'archivio completo del Museo. Usalo per tutte le prossime risposte." }
             ]
         });
         chatHistory.push({
             role: "model",
-            parts: [{ text: "Ricevuto. Utilizzerò esclusivamente questo archivio per rispondere." }]
+            parts: [{ text: "Ricevuto. Utilizzerò esclusivamente questo archivio per le mie risposte." }]
         });
     }
 
@@ -78,6 +86,7 @@ wss.on('connection', (ws) => {
             const data = JSON.parse(message);
             if (data.name !== 'conversationRequest') return;
 
+            // Messaggio di benvenuto
             if (data.body?.optionalArgs?.kind === "init") {
                 return ws.send(JSON.stringify({
                     category: "scene", kind: "request", name: "conversationResponse", transaction: data.transaction,
@@ -90,7 +99,7 @@ wss.on('connection', (ws) => {
 
             console.log("🗣️ Utente:", userText);
 
-            // FILLER: Prende tempo mentre Gemini elabora
+            // 1. FILLER: Prendiamo tempo
             const randomFiller = FRASI_ATTESA[Math.floor(Math.random() * FRASI_ATTESA.length)];
             ws.send(JSON.stringify({
                 category: "scene", kind: "request", name: "conversationResponse", 
@@ -98,6 +107,7 @@ wss.on('connection', (ws) => {
                 body: { personaId: 1, output: { text: randomFiller } }
             }));
 
+            // 2. CHIAMATA A GEMINI
             let replyText = "";
             let success = false;
 
@@ -108,20 +118,16 @@ wss.on('connection', (ws) => {
                         systemInstruction: MUSA_SYSTEM_PROMPT
                     });
 
-                const chat = model.startChat({
+                    const chat = model.startChat({
                         history: chatHistory,
-                        // Rimuoviamo il limite dei token per lasciarla parlare liberamente
-                        generationConfig: { temperature: 0.1 } 
+                        generationConfig: { temperature: 0.1 } // Limite token rimosso
                     });
 
                     const result = await chat.sendMessage(userText);
                     
-                    // Aggiungiamo questa riga per spiare PERCHÉ Gemini si ferma!
-                    console.log("🏁 Motivo dello stop:", result.response.candidates[0].finishReason);
+                    // Stampiamo il motivo della fine per evitare sorprese
+                    console.log("🏁 Motivo dello stop:", result.response.candidates[0]?.finishReason || "Sconosciuto");
                     
-                    replyText = result.response.text();
-
-                    const result = await chat.sendMessage(userText);
                     replyText = result.response.text();
                     
                     success = true;
@@ -138,15 +144,17 @@ wss.on('connection', (ws) => {
                 replyText = "Chiedo scusa, i miei sistemi di ricerca sono lenti oggi. Potete riprovare?";
             }
 
-            // PULIZIA FINALE: Rimuove ritorni a capo, asterischi e RIATTACCA GLI APOSTROFI
+            // 3. PULIZIA TESTO
+            // Toglie a capo (\n \r), toglie markdown (*) e sistema gli apostrofi staccati (' )
             replyText = replyText
-                .replace(/[\n\r]+/g, ' ')  // Toglie gli a capo che fanno spegnere l'avatar
-                .replace(/\*/g, '')        // Toglie la formattazione markdown
-                .replace(/'\s+/g, "'")     // CORREZIONE APOSTROFI: Trasforma "C' è" in "C'è"
+                .replace(/[\n\r]+/g, ' ')  
+                .replace(/\*/g, '')        
+                .replace(/'\s+/g, "'")     
                 .trim();
                 
             console.log("🧠 Musa risponde:", replyText);
 
+            // 4. INVIO DELLA RISPOSTA FINALE
             ws.send(JSON.stringify({
                 category: "scene", kind: "request", name: "conversationResponse", transaction: null,
                 body: { personaId: 1, output: { text: replyText } }
