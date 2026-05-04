@@ -45,9 +45,9 @@ const wss = new WebSocketServer({ server });
 wss.on('connection', (ws) => {
     console.log("🟢 ORCHESTRATOR: Connessione stabilita con un visitatore!");
 
-    // Inizializza il modello Flash con il contesto gigante
+// Inizializza il modello Flash con il contesto gigante
     const model = genAI.getGenerativeModel({
-        model: "gemini-1.5-flash", 
+        model: "gemini-2.5-flash", // LO STANDARD ATTUALE (MAGGIO 2026)
         systemInstruction: MUSA_SYSTEM_PROMPT,
     });
 
