@@ -1,48 +1,59 @@
 require('dotenv').config();
 const express = require('express');
 const { WebSocketServer } = require('ws');
-const fs = require('fs');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
+// IMPORTIAMO IL GESTORE FILE DI GOOGLE
+const { GoogleAIFileManager } = require("@google/generative-ai/server");
 
 const app = express();
-app.get('/', (req, res) => res.send('Orchestrator Musa con Fillers e Anti-Taglio Attivo!'));
+app.get('/', (req, res) => res.send('Orchestrator Musa con File API, Fillers e Anti-Taglio Attivo!'));
 
 const PORT = process.env.PORT || 3000;
 const server = app.listen(PORT, () => console.log(`🚀 Server HTTP in ascolto sulla porta ${PORT}`));
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+const fileManager = new GoogleAIFileManager(process.env.GEMINI_API_KEY);
 
 // ==========================================
-// CARICAMENTO CONOSCENZA
+// UPLOAD E CACHING DEL VOLUME ADI SU GOOGLE
 // ==========================================
-let adiKnowledgeBase = "";
-try {
-    adiKnowledgeBase = fs.readFileSync('ADI_fulltext.txt', 'utf8');
-    console.log("📚 Volume ADI caricato correttamente!");
-} catch (err) {
-    console.error("⚠️ Errore fatale: File ADI_fulltext.txt non trovato!");
+let adiFileUri = null;
+let adiFileMimeType = null;
+
+async function initKnowledgeBase() {
+    try {
+        console.log("⏳ Caricamento del volume ADI (ADI_fulltext.txt) sui server Google...");
+        const uploadResult = await fileManager.uploadFile("ADI_fulltext.txt", {
+            mimeType: "text/plain",
+            displayName: "Enciclopedia ADI",
+        });
+        adiFileUri = uploadResult.file.uri;
+        adiFileMimeType = uploadResult.file.mimeType;
+        console.log(`✅ File caricato con successo! URI: ${adiFileUri}`);
+    } catch (err) {
+        console.error("⚠️ Errore fatale caricamento file su Google:", err.message);
+    }
 }
+// Avviamo il caricamento appena si accende il server
+initKnowledgeBase();
 
 const MUSA_SYSTEM_PROMPT = `
 Sei Musa, guida del Museo del Design ADI. 
 Rispondi in modo COLLOQUIALE, come se stessi parlando a voce.
 NO markdown, NO asterischi, NO elenchi. Numeri senza punti o virgole.
-Usa solo queste info: \n\n${adiKnowledgeBase}`;
+Usa ESCLUSIVAMENTE il documento fornito per rispondere.`;
 
-// Lista dei modelli in ordine di priorità
 const MODEL_PRIORITY = [
     "gemini-3-flash-preview",
     "gemini-3.1-flash-lite-preview",
     "gemini-2.5-flash"
 ];
 
-// Le 5 frasi di circostanza per prendere tempo
 const FRASI_ATTESA = [
     "Ottima domanda, fammi consultare l'archivio...",
     "Un attimo solo, verifico subito nei miei documenti...",
-    "Che curiosità interessante! Controllo i dati...",
-    "Sto cercando le informazioni esatte, dammi un secondo...",
-    "Vado a pescare questo dettaglio nella mia memoria storica..."
+    "Controllo subito i dati storici, dammi un secondo...",
+    "Vado a pescare questo dettaglio nella mia memoria..."
 ];
 
 const wss = new WebSocketServer({ server });
@@ -50,7 +61,21 @@ const wss = new WebSocketServer({ server });
 wss.on('connection', (ws) => {
     console.log("🟢 Connessione stabilita con il visitatore!");
     
+    // Inizializziamo la chat passando il file caricato su Google come primissimo messaggio
     let chatHistory = [];
+    if (adiFileUri) {
+        chatHistory.push({
+            role: "user",
+            parts: [
+                { fileData: { mimeType: adiFileMimeType, fileUri: adiFileUri } },
+                { text: "Questo è l'archivio completo. Usalo per tutte le prossime risposte." }
+            ]
+        });
+        chatHistory.push({
+            role: "model",
+            parts: [{ text: "Ricevuto. Utilizzerò esclusivamente questo archivio per rispondere." }]
+        });
+    }
 
     ws.on('message', async (message) => {
         try {
@@ -69,20 +94,14 @@ wss.on('connection', (ws) => {
 
             console.log("🗣️ Utente:", userText);
 
-            // ==========================================
-            // 1. IL TRUCCO DEL FILLER (PRENDERE TEMPO)
-            // ==========================================
-            // Peschiamo una frase a caso e la inviamo IMMEDIATAMENTE a Soul Machines
+            // FILLER: Prende tempo mentre Gemini elabora
             const randomFiller = FRASI_ATTESA[Math.floor(Math.random() * FRASI_ATTESA.length)];
             ws.send(JSON.stringify({
                 category: "scene", kind: "request", name: "conversationResponse", 
-                transaction: data.transaction, // Rispondiamo subito alla sua transazione
+                transaction: data.transaction, 
                 body: { personaId: 1, output: { text: randomFiller } }
             }));
 
-            // ==========================================
-            // 2. ELABORAZIONE DELLA VERA RISPOSTA (GEMINI)
-            // ==========================================
             let replyText = "";
             let success = false;
 
@@ -107,7 +126,7 @@ wss.on('connection', (ws) => {
                     break; 
 
                 } catch (err) {
-                    console.warn(`⚠️ Modello ${modelName} non disponibile, provo il fallback...`);
+                    console.warn(`⚠️ Modello ${modelName} non disponibile, fallback...`);
                 }
             }
 
@@ -115,15 +134,15 @@ wss.on('connection', (ws) => {
                 replyText = "Chiedo scusa, i miei sistemi di ricerca sono lenti oggi. Potete riprovare?";
             }
 
-            // ==========================================
-            // 3. LA CURA ANTI-TAGLIO E L'INVIO FINALE
-            // ==========================================
-            // Questa Regex rimuove gli asterischi e TUTTI gli "a capo" (\n e \r) 
-            // trasformando il testo in una riga singola per non spegnere l'avatar
-            replyText = replyText.replace(/[\n\r]+/g, ' ').replace(/\*/g, '').trim();
+            // PULIZIA FINALE: Rimuove ritorni a capo, asterischi e RIATTACCA GLI APOSTROFI
+            replyText = replyText
+                .replace(/[\n\r]+/g, ' ')  // Toglie gli a capo che fanno spegnere l'avatar
+                .replace(/\*/g, '')        // Toglie la formattazione markdown
+                .replace(/'\s+/g, "'")     // CORREZIONE APOSTROFI: Trasforma "C' è" in "C'è"
+                .trim();
+                
             console.log("🧠 Musa risponde:", replyText);
 
-            // Inviamo la risposta vera e propria (transaction: null la fa accodare al filler)
             ws.send(JSON.stringify({
                 category: "scene", kind: "request", name: "conversationResponse", transaction: null,
                 body: { personaId: 1, output: { text: replyText } }
