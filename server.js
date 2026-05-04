@@ -30,11 +30,11 @@ Rispondi in modo COLLOQUIALE e BREVE (max 2-3 frasi).
 NO markdown, NO asterischi, NO elenchi. Numeri senza punti o virgole.
 Usa solo queste info: \n\n${adiKnowledgeBase}`;
 
-// Lista dei modelli in ordine di priorità (Fallback)
+// Lista dei modelli in ordine di priorità (Fallback aggiornato a Gemini 3)
 const MODEL_PRIORITY = [
-    "gemini-2.5-flash",
-    "gemini-2.5-flash-lite",
-    "gemini-2.0-flash"
+    "gemini-3-flash-preview",         // Il nuovissimo modello Flash della serie 3 (Velocissimo)
+    "gemini-3.1-flash-lite-preview",  // La versione Lite 3.1 per aggirare i colli di bottiglia
+    "gemini-2.5-flash"                // Il vecchio modello come ultima ruota di scorta
 ];
 
 const wss = new WebSocketServer({ server });
