@@ -100,11 +100,11 @@ wss.on('connection', (ws) => {
                 ws.send(JSON.stringify(msg));
             };
 
-            // Programmazione dei Filler
-            activeTimers.push(setTimeout(() => sendToSM(FILLER_1[Math.floor(Math.random()*FILLER_1.length)]), 1000));
-            activeTimers.push(setTimeout(() => sendToSM(FILLER_2[Math.floor(Math.random()*FILLER_2.length)]), 6000)); // 1s + 5s
-            activeTimers.push(setTimeout(() => sendToSM(FILLER_3[Math.floor(Math.random()*FILLER_3.length)]), 12000)); // 6s + 6s
-
+           // Programmazione dei Filler con tempi di respiro più lunghi
+            activeTimers.push(setTimeout(() => sendToSM(FILLER_1[Math.floor(Math.random()*FILLER_1.length)]), 1500));  // A 1.5 secondi
+            activeTimers.push(setTimeout(() => sendToSM(FILLER_2[Math.floor(Math.random()*FILLER_2.length)]), 9000));  // A 9 secondi
+            activeTimers.push(setTimeout(() => sendToSM(FILLER_3[Math.floor(Math.random()*FILLER_3.length)]), 18000)); // A 18 secondi
+           
             // ---------------------------------------------------------
             // CHIAMATA A GEMINI
             // ---------------------------------------------------------
