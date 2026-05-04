@@ -1,25 +1,63 @@
 require('dotenv').config();
 const express = require('express');
 const { WebSocketServer } = require('ws');
-const axios = require('axios');
-const cors = require('cors');
+const fs = require('fs');
+const { GoogleGenerativeAI } = require('@google/generative-ai');
 
 const app = express();
-app.use(cors());
-
-app.get('/', (req, res) => res.send('Orchestrator Websocket per Musa (Architettura Dify RAG) Attivo!'));
+app.get('/', (req, res) => res.send('Orchestrator Websocket per Musa (Gemini Flash) Attivo!'));
 
 const PORT = process.env.PORT || 3000;
 const server = app.listen(PORT, () => console.log(`🚀 Server HTTP in ascolto sulla porta ${PORT}`));
 
+// Inizializza l'SDK di Gemini
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+
+// ==========================================
+// PREPARAZIONE DELL'ENCICLOPEDIA
+// ==========================================
+let adiKnowledgeBase = "";
+try {
+    adiKnowledgeBase = fs.readFileSync('ADI_Fulltext.txt', 'utf8');
+    console.log("📚 Volume ADI (3MB) caricato in memoria con successo!");
+} catch (err) {
+    console.error("⚠️ Errore: File ADI_Fulltext.txt non trovato. Assicurati di averlo caricato su GitHub.");
+}
+
+const MUSA_SYSTEM_PROMPT = `
+Sei Musa, un'amichevole ed esperta guida del Museo del Design dell'ADI a Milano.
+Rispondi in modo COLLOQUIALE, ISTANTANEO e CONCISO.
+
+REGOLA D'ORO PER LA VOCE:
+- Le tue risposte devono essere pensate per essere pronunciate a voce (massimo 2-3 frasi brevi).
+- DIVIETO ASSOLUTO: Non usare MAI asterischi, elenchi puntati o numerati, grassetti o markdown. Scrivi i numeri in lettere o senza virgole (es. 1000).
+- Usa ESCLUSIVAMENTE il documento fornito per rispondere. Se non sai qualcosa o non è nel documento, di' semplicemente: "Purtroppo non ho questa informazione nei miei archivi".
+
+ECCO L'INTERO ARCHIVIO DEL MUSEO ADI DA CUI ATTINGERE:
+\n\n${adiKnowledgeBase}
+`;
+
+// ==========================================
+// CERVELLO WEBSOCKET
+// ==========================================
 const wss = new WebSocketServer({ server });
 
 wss.on('connection', (ws) => {
     console.log("🟢 ORCHESTRATOR: Connessione stabilita con un visitatore!");
 
-    // Generiamo un ID unico per questo visitatore, così Dify ricorda la conversazione
-    const sessionId = "visitor-" + Math.random().toString(36).substring(7);
-    let conversationId = ""; // Qui salveremo l'ID della chat fornito da Dify
+    // Inizializza il modello Flash con il contesto gigante
+    const model = genAI.getGenerativeModel({
+        model: "gemini-1.5-flash", 
+        systemInstruction: MUSA_SYSTEM_PROMPT,
+    });
+
+    // Inizializziamo la chat per mantenere la memoria della conversazione
+    const chat = model.startChat({
+        generationConfig: {
+            maxOutputTokens: 150, // Forza risposte brevi e fulminee
+            temperature: 0.1,     // Molto bassa: massima fedeltà storica ai dati ADI
+        }
+    });
 
     ws.on('message', async (message) => {
         try {
@@ -28,7 +66,7 @@ wss.on('connection', (ws) => {
 
             // BENVENUTO
             if (data.body?.optionalArgs?.kind === "init") {
-                const welcomeMsg = "Benvenuti al Museo del Design! Cosa volete scoprire oggi?";
+                const welcomeMsg = "Benvenuti al Museo del Design! Sono Musa, cosa volete scoprire oggi?";
                 return ws.send(JSON.stringify({
                     category: "scene", kind: "request", name: "conversationResponse", transaction: data.transaction,
                     body: { personaId: 1, output: { text: welcomeMsg } }
@@ -40,40 +78,20 @@ wss.on('connection', (ws) => {
 
             console.log("🗣️ Visitatore chiede:", userText);
 
-            // ==========================================
-            // CHIAMATA ALLE API DI DIFY
-            // ==========================================
-            const payload = {
-                inputs: {},
-                query: userText,
-                response_mode: "blocking",
-                user: sessionId
-            };
+            // CHIAMATA A GEMINI FLASH
+            const result = await chat.sendMessage(userText);
+            let replyText = result.response.text();
             
-            // Se abbiamo già iniziato a parlare, passiamo l'ID per farle avere memoria
-            if (conversationId) {
-                payload.conversation_id = conversationId;
-            }
+            // Rete di sicurezza anti-markdown
+            replyText = replyText.replace(/\*/g, '').trim();
 
-            const response = await axios.post('https://api.dify.ai/v1/chat-messages', payload, {
-                headers: { 'Authorization': 'Bearer ' + process.env.DIFY_API_KEY }
-            });
-
-            // Salviamo l'ID della conversazione aggiornato
-            conversationId = response.data.conversation_id;
-
-            // Dify restituisce il testo dentro 'answer'
-            let replyText = response.data.answer || "";
-            
-            if (!replyText.trim()) {
+            if (!replyText) {
                 replyText = "Perdona l'attesa. Puoi ripetermi la domanda?";
             }
 
-            console.log("🧠 Musa (Dify) risponde:", replyText);
+            console.log("🧠 Musa (Gemini) risponde:", replyText);
 
-            // ==========================================
             // INVIO A SOUL MACHINES
-            // ==========================================
             const smResponse = {
                 category: "scene",
                 kind: "request", 
@@ -88,10 +106,10 @@ wss.on('connection', (ws) => {
             ws.send(JSON.stringify(smResponse));
 
         } catch (e) {
-            console.error("❌ Errore Dify:", e.response ? JSON.stringify(e.response.data) : e.message);
+            console.error("❌ Errore Gemini:", e.message);
             ws.send(JSON.stringify({
                 category: "scene", kind: "request", name: "conversationResponse", transaction: null,
-                body: { personaId: 1, output: { text: "Scusa, in questo momento i miei archivi sono in aggiornamento." } }
+                body: { personaId: 1, output: { text: "Scusa, sto consultando i miei archivi, ci riproviamo tra un attimo?" } }
             }));
         }
     });
