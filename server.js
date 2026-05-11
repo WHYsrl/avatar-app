@@ -108,8 +108,8 @@ wss.on('connection', (ws) => {
             };
 
            // Programmazione dei Filler con tempi di respiro più lunghi
-            activeTimers.push(setTimeout(() => sendToSM(FILLER_1[Math.floor(Math.random()*FILLER_1.length)]), 1500));  // A 1.5 secondi
-            activeTimers.push(setTimeout(() => sendToSM(FILLER_2[Math.floor(Math.random()*FILLER_2.length)]), 9000));  // A 9 secondi
+            activeTimers.push(setTimeout(() => sendToSM(FILLER_1[Math.floor(Math.random()*FILLER_1.length)]), 2000));  // A 2 secondi
+            activeTimers.push(setTimeout(() => sendToSM(FILLER_2[Math.floor(Math.random()*FILLER_2.length)]), 10000));  // A 10 secondi
             activeTimers.push(setTimeout(() => sendToSM(FILLER_3[Math.floor(Math.random()*FILLER_3.length)]), 18000)); // A 18 secondi
            
             // ---------------------------------------------------------
