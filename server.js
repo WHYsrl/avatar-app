@@ -49,7 +49,7 @@ const MODEL_PRIORITY = [
 
 
 // Gruppi di filler per evitare ripetizioni
-const FILLER_1 = ["Buongiorno, grazie per la domanda", "Che curiosità interessante!"];
+const FILLER_1 = ["Grazie per la domanda", "Che curiosità interessante!", "Un attimo di pazienza, sto recuperando le informazioni", "Sto interrogando il database del Compasso d'Oro", "Interessante! Lasciami consultare le note della collezione…", "Sto sfogliando virtualmente il catalogo del museo per te...", "Questa è una delle domande più frequenti dei nostri visitatori!", "Ottima osservazione, guardiamo insieme i dettagli…", "Ti recupero immediatamente i dettagli", "Un secondo solo, verifico"];
 const FILLER_2 = ["Sto ancora spulciando tra i premi, ci sono quasi...", "Arrivo subito, sto cercando il dettaglio preciso...", "Ancora un istante, l'archivio è molto vasto..."];
 const FILLER_3 = ["Ti ringrazio per la pazienza, sto arrivando alla conclusione...", "Ecco, ho quasi trovato tutto quello che ti serve...", "Ancora un momento e sarò da te con la risposta..."];
 
