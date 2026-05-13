@@ -1768,6 +1768,56 @@ Corea del Sud: 1 designer.
 Stati Uniti: nessun designer individuale, 3 istituzioni.
 
 
+D: Il ventilatore Zerowatt fu il primo oggetto premiato?
+R: No. Non va detto che il ventilatore Zerowatt fu il primo oggetto premiato. Nel 1954 ci furono 15 premi nella prima edizione, ma non bisogna presentare Zerowatt come “il primo oggetto premiato”.
+
+D: Ci sono le motivazioni della giuria per i premi del 1954?
+R: Sì. Le motivazioni della giuria per i premi del 1954 sono presenti nel catalogo. Il chatbot non deve dire che non sono disponibili. Se l’utente chiede la motivazione di un premio del 1954, deve cercare o usare la motivazione specifica dal catalogo, senza inventarla.
+
+D: Qual è la motivazione della giuria per la scimmietta Zizì?
+R: La motivazione della giuria è presente nel catalogo. Il chatbot non deve rispondere che non la conosce se il catalogo è disponibile nel contesto. Deve riportare la motivazione corretta dal catalogo.
+
+D: Enel ha mai vinto un Compasso d’Oro?
+R: Sì. Enel X ha vinto un Compasso d’Oro nel 2020. Non rispondere che non risultano premi a Enel.
+
+D: Il divano Bocca ha vinto il Compasso d’Oro?
+R: No, il divano Bocca non risulta tra i vincitori del Compasso d’Oro. Se l’utente chiede dove trovarlo in museo o perché non lo trova, bisogna dirlo subito: non è un oggetto premiato con il Compasso d’Oro. Solo dopo si può aggiungere che il museo è autogenerativo e che la presenza degli oggetti nel percorso espositivo può variare.
+
+D: La poltrona Proust ha vinto il Compasso d’Oro?
+R: No, la poltrona Proust non risulta vincitrice del Compasso d’Oro. Alessandro Mendini ha però ricevuto il Compasso d’Oro alla carriera nel 2014. Se l’utente chiede dove si trova la poltrona Proust, il chatbot deve prima chiarire che non risulta premiata con il Compasso d’Oro.
+
+D: Quando è nato o quando ha aperto l’ADI Design Museum?
+R: L’ADI Design Museum ha aperto a Milano nel 2021. Se l’utente chiede “quando è nato il museo?”, il chatbot deve intendere l’ADI Design Museum, non il MoMA o altri musei.
+
+D: Chi ha curato la prima mostra permanente del museo?
+R: La prima mostra permanente del museo è “Il cucchiaio e la città”. Il nome del curatore è specificato nel catalogo: il chatbot non deve dire genericamente che non lo conosce se il catalogo è disponibile.
+
+D: Quali esempi legati alla Lombardia si possono citare?
+R: Un esempio importante è il simbolo e l’immagine della Regione Lombardia. Il progetto coinvolge Bob Noorda, Roberto Sambonet, Pino Tovaglia e Bruno Munari, che fu responsabile del coordinamento del progetto. Non dire che Bruno Munari non ebbe alcun ruolo.
+
+D: Che cosa è successo nella storia del Compasso d’Oro nel 1979?
+R: Nel 1979 si tiene l’undicesima edizione del Compasso d’Oro, non la tredicesima. Fu un’edizione molto importante dopo la pausa successiva al 1970. I premi furono 42, non 28. Tra i riferimenti rilevanti del 1979 ci sono Kartell, premiata alla carriera, e altri progetti significativi della storia del design italiano.
+
+D: Raccontami la storia della scimmietta Zizì.
+R: Zizì è la celebre scimmietta progettata da Bruno Munari per Pigomma, premiata con il Compasso d’Oro nel 1954. È realizzata in gommapiuma con un’anima in rame cotto, non in filo d’acciaio. La sua forza sta nella capacità di assumere molte pose diverse, trasformandosi in un gioco libero, espressivo e intelligente.
+
+D: Repower ha vinto il Compasso d’Oro?
+R: Sì. Repower ha ricevuto il Compasso d’Oro nel 2020 con E-Lounge, panchina elettrificata di servizio disegnata da Antonio Lanzillo & Partners. Repower ha inoltre vinto nel 2022 con Lambrogio e Lambrogino. Non limitarsi a citare solo il premio del 2020.
+
+D: Ci sono esempi di progetti grafici premiati con il Compasso d’Oro?
+R: Sì. Il Compasso d’Oro ha premiato anche progetti grafici, editoriali, di identità visiva e comunicazione. Tra gli esempi si possono citare i 130 anni della grafica Campari, premiati nel 1991, non nel 1998; il progetto di identità e comunicazione Multiverso Icograda Design Week 2011; il Manuale e Sistema di Identità Visiva della Soprintendenza Archeologica di Pompei, premiato nel 2004; la rivista IF di Italo Lupi per Fondazione IBM Italia, premiata nel 1991; e altri esempi di immagine coordinata e grafica editoriale.
+
+D: Quando il Compasso d’Oro ha iniziato a premiare anche progetti grafici e non solo oggetti domestici?
+R: Il Compasso d’Oro inizia a premiare anche progetti grafici e ambiti più ampi a partire dal 1959. Non dire che questo avviene fin dall’inizio nel 1954: nel 1954 il premio era concentrato su oggetti domestici e per uso personale.
+
+D: Dove posso trovare la lampada Eclisse di Vico Magistretti?
+R: La lampada Eclisse di Vico Magistretti per Artemide è stata premiata nel 1967. Il 1967 corrisponde alla nona edizione del Compasso d’Oro, non all’undicesima. Se si fornisce una collocazione in mostra, evitare di indicare l’edizione sbagliata.
+
+D: Chi è Beppe Finessi?
+R: Beppe Finessi è un curatore, studioso e autore legato alla cultura del design. Ha curato e sviluppato progetti editoriali e culturali sul design, tra cui Inventario. Non attribuirgli informazioni non verificate o non presenti nel catalogo. Se il contesto non contiene dati certi, rispondere in modo sobrio e verificabile.
+
+D: Chi è Nanni Strada?
+R: Nanni Strada è una figura fondamentale del design della moda in Italia. Ha ricevuto il Compasso d’Oro alla carriera nel 2018. Nel 1979 ha vinto il Compasso d’Oro con la ricerca “Il Manto e la Pelle”. L’Abito politubolare va citato come parte di quella ricerca, non come premio separato.
 
 
 
