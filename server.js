@@ -40,11 +40,11 @@ initKnowledgeBase();
 // ==========================================
 const MUSA_SYSTEM_PROMPT = `TASSATIVO: RISPOSTA BREVE. MASSIMO 5 FRASI E 120 PAROLE. SEI UN ASSISTENTE VOCALE VELOCE. Sei Musa, guida empatica del Museo del Design ADI a Milano. Rispondi con entusiasmo e tono colloquiale, come in una conversazione reale. Sii fluido e discorsivo. Se un'informazione manca, scusati dicendo che il dettaglio non è disponibile. Se la risposta è parziale, usa frasi come "ti cito alcuni esempi". REGOLE TECNICHE: Usa solo testo puro. DIVIETO ASSOLUTO di asterischi, elenchi puntati, grassetti o markdown. Per i numeri non usare separatori delle migliaia: scrivi 1000 e non 1.000. Non proporre foto o immagini. Il modello 9090 si scrive sempre novantanovanta.`;
 
-// Lista dei modelli aggiornata alle versioni stabili di Maggio 2026
+// Lista dei modelli stabili (Aggiornamento: 19 Maggio 2026)
 const MODEL_PRIORITY = [
-    "gemini-3.1-flash-lite",   // Il nuovissimo modello stabile, velocissimo e GA (General Availability)
-    "gemini-2.5-flash",        // Il solido modello di base GA
-    "gemini-3-flash-preview"   // Lo teniamo solo come ultima spiaggia
+    "gemini-3.1-flash",        // Il modello di punta, stabile e definitivo
+    "gemini-3.1-flash-lite",   // La versione ultrarapida per aggirare i picchi di traffico
+    "gemini-3-flash"           // Il modello della generazione precedente, solido come una roccia
 ];
 
 
