@@ -146,9 +146,12 @@ wss.on('connection', (ws) => {
             console.log("🧠 Musa risponde:", replyText);
             sendToSM(replyText, true);
 
-        } catch (e) {
-            console.error("❌ Errore:", e.message);
-        }
+        } catch (err) {
+                    // Questo stamperà l'errore reale completo nei log di Render
+                    console.error(`❌ ERRORE COMPLETO SU ${modelName}:`);
+                    console.error(err); 
+                    console.warn(`⚠️ Modello ${modelName} fallito, provo il successivo...`);
+                }
     });
 
     ws.on('close', () => console.log("🔴 Connessione chiusa."));
