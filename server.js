@@ -110,32 +110,57 @@ wss.on('connection', (ws) => {
             activeTimers.push(setTimeout(() => sendToSM(FILLER_2[Math.floor(Math.random()*FILLER_2.length)]), 10000));
             activeTimers.push(setTimeout(() => sendToSM(FILLER_3[Math.floor(Math.random()*FILLER_3.length)]), 18000));
             
-            // ---------------------------------------------------------
-            // CHIAMATA A GEMINI
+       // ---------------------------------------------------------
+            // CHIAMATA A GEMINI (REST - CON SYSTEM INSTRUCTIONS RIPRISTINATE)
             // ---------------------------------------------------------
             let replyText = "";
             let success = false;
 
             for (const modelName of MODEL_PRIORITY) {
                 try {
-                    const model = genAI.getGenerativeModel({ model: modelName, systemInstruction: MUSA_SYSTEM_PROMPT });
-                    const chat = model.startChat({
-                        history: chatHistory
-                        // Configurazione rimossa per compatibilità con Gemini 3.5
+                    // Prepariamo la storia della chat includendo il messaggio corrente dell'utente
+                    const contents = [...chatHistory, { role: "user", parts: [{ text: userText }] }];
+
+                    // Configurazione corretta del payload per le API REST di Gemini 3.5
+                    const payload = {
+                        systemInstruction: {
+                            parts: [
+                                { text: MUSA_SYSTEM_PROMPT }
+                            ]
+                        },
+                        contents: contents,
+                        generationConfig: {
+                            thinkingConfig: { 
+                                thinkingLevel: "LOW" // Latenza minima per l'avatar
+                            }
+                        }
+                    };
+
+                    // Chiamata REST diretta (Bypassa i bug della vecchia libreria SDK)
+                    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${process.env.GEMINI_API_KEY}`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
                     });
 
-                    // ERRORE 1 CORRETTO: rimosso il doppione della chiamata
-                    const result = await chat.sendMessage(userText);
-                    replyText = result.response.text();
+                    const result = await response.json();
+
+                    if (!response.ok) {
+                        throw new Error(`[API Error ${response.status}] ${result.error?.message || 'Sconosciuto'}`);
+                    }
+
+                    // Estraiamo il testo della risposta generata
+                    replyText = result.candidates[0].content.parts[0].text;
                     
                     success = true;
+                    // Aggiorniamo la cronologia della chat per i turni successivi
                     chatHistory.push({ role: "user", parts: [{ text: userText }] });
                     chatHistory.push({ role: "model", parts: [{ text: replyText }] });
                     break;
+
                 } catch (err) {
                     console.error(`❌ ERRORE CRITICO SU ${modelName}:`);
                     console.error(`Messaggio: ${err.message}`);
-                    console.error(`Stack: ${err.stack}`);
                     console.warn(`⚠️ Avvio procedura di Fallback da ${modelName}...`);
                 }
             }
