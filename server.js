@@ -47,7 +47,6 @@ const MODEL_PRIORITY = [
     "gemini-2.5-flash"          // Ultima spiaggia: Modello legacy ancora vivo
 ];
 
-
 // Gruppi di filler per evitare ripetizioni
 const FILLER_1 = ["Grazie per la domanda", "Che curiosità interessante!", "Un attimo di pazienza, sto recuperando le informazioni", "Sto interrogando il database del Compasso d'Oro", "Interessante! Lasciami consultare le note della collezione…", "Sto sfogliando virtualmente il catalogo del museo per te...", "Questa è una delle domande più frequenti dei nostri visitatori!", "Ottima osservazione, guardiamo insieme i dettagli…", "Ti recupero immediatamente i dettagli", "Un secondo solo, verifico"];
 const FILLER_2 = ["Sto ancora spulciando tra i premi, ci sono quasi...", "Arrivo subito, sto cercando il dettaglio preciso...", "Ancora un istante, l'archivio è molto vasto..."];
@@ -89,15 +88,14 @@ wss.on('connection', (ws) => {
             let transactionHandled = false;
             let activeTimers = [];
 
-            // Funzione per inviare messaggi a Soul Machines assicurando la corretta gestione della transazione
+            // Funzione per inviare messaggi a Soul Machines
             const sendToSM = (text, isFinal = false) => {
-                if (responseSent) return; // Se la risposta finale è uscita, non inviare altro
+                if (responseSent) return; 
                 
                 const msg = {
                     category: "scene",
                     kind: "request",
                     name: "conversationResponse",
-                    // La prima risposta (filler o finale) deve avere il transaction ID originale
                     transaction: transactionHandled ? null : data.transaction,
                     body: { personaId: 1, output: { text: text } }
                 };
@@ -107,11 +105,11 @@ wss.on('connection', (ws) => {
                 ws.send(JSON.stringify(msg));
             };
 
-           // Programmazione dei Filler con tempi di respiro più lunghi
-            activeTimers.push(setTimeout(() => sendToSM(FILLER_1[Math.floor(Math.random()*FILLER_1.length)]), 2000));  // A 2 secondi
-            activeTimers.push(setTimeout(() => sendToSM(FILLER_2[Math.floor(Math.random()*FILLER_2.length)]), 10000));  // A 10 secondi
-            activeTimers.push(setTimeout(() => sendToSM(FILLER_3[Math.floor(Math.random()*FILLER_3.length)]), 18000)); // A 18 secondi
-           
+            // Programmazione dei Filler
+            activeTimers.push(setTimeout(() => sendToSM(FILLER_1[Math.floor(Math.random()*FILLER_1.length)]), 2000));
+            activeTimers.push(setTimeout(() => sendToSM(FILLER_2[Math.floor(Math.random()*FILLER_2.length)]), 10000));
+            activeTimers.push(setTimeout(() => sendToSM(FILLER_3[Math.floor(Math.random()*FILLER_3.length)]), 18000));
+            
             // ---------------------------------------------------------
             // CHIAMATA A GEMINI
             // ---------------------------------------------------------
@@ -121,13 +119,12 @@ wss.on('connection', (ws) => {
             for (const modelName of MODEL_PRIORITY) {
                 try {
                     const model = genAI.getGenerativeModel({ model: modelName, systemInstruction: MUSA_SYSTEM_PROMPT });
-                   const chat = model.startChat({
+                    const chat = model.startChat({
                         history: chatHistory
-                        // ❌ ABBIAMO RIMOSSO COMPLETAMENTE LA GENERATION CONFIG
+                        // Configurazione rimossa per compatibilità con Gemini 3.5
                     });
 
-                    const result = await chat.sendMessage(userText);
-                    
+                    // ERRORE 1 CORRETTO: rimosso il doppione della chiamata
                     const result = await chat.sendMessage(userText);
                     replyText = result.response.text();
                     
@@ -135,8 +132,7 @@ wss.on('connection', (ws) => {
                     chatHistory.push({ role: "user", parts: [{ text: userText }] });
                     chatHistory.push({ role: "model", parts: [{ text: replyText }] });
                     break;
-               } catch (err) {
-                    // Stampa l'errore esatto e nudo e crudo restituito da Google
+                } catch (err) {
                     console.error(`❌ ERRORE CRITICO SU ${modelName}:`);
                     console.error(`Messaggio: ${err.message}`);
                     console.error(`Stack: ${err.stack}`);
@@ -144,7 +140,7 @@ wss.on('connection', (ws) => {
                 }
             }
 
-            // Pulizia dei timer: Gemini ha risposto, non servono più filler
+            // Pulizia dei timer
             activeTimers.forEach(t => clearTimeout(t));
 
             if (!success) replyText = "Scusami, i miei archivi sono un po' lenti. Puoi riprovare?";
@@ -156,11 +152,10 @@ wss.on('connection', (ws) => {
             sendToSM(replyText, true);
 
         } catch (err) {
-                    // Questo stamperà l'errore reale completo nei log di Render
-                    console.error(`❌ ERRORE COMPLETO SU ${modelName}:`);
-                    console.error(err); 
-                    console.warn(`⚠️ Modello ${modelName} fallito, provo il successivo...`);
-                }
+            // ERRORE 2 CORRETTO: Modificato il log per errori generali del websocket
+            console.error(`❌ ERRORE GENERALE NEL GESTORE MESSAGGI:`);
+            console.error(err); 
+        }
     });
 
     ws.on('close', () => console.log("🔴 Connessione chiusa."));
