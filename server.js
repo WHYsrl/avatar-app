@@ -121,7 +121,15 @@ wss.on('connection', (ws) => {
             for (const modelName of MODEL_PRIORITY) {
                 try {
                     const model = genAI.getGenerativeModel({ model: modelName, systemInstruction: MUSA_SYSTEM_PROMPT });
-                    const chat = model.startChat({ history: chatHistory, generationConfig: { temperature: 0.1 } });
+                    const chat = model.startChat({
+                        history: chatHistory,
+                        generationConfig: { 
+                            // Rimuoviamo la temperature e passiamo al nuovo sistema di Gemini 3.5
+                            thinkingConfig: {
+                                thinkingLevel: "LOW" // Ottimizza velocità e costi per l'avatar
+                            }
+                        } 
+                    });
                     
                     const result = await chat.sendMessage(userText);
                     replyText = result.response.text();
