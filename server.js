@@ -121,19 +121,14 @@ wss.on('connection', (ws) => {
                     // Prepariamo la storia della chat includendo il messaggio corrente dell'utente
                     const contents = [...chatHistory, { role: "user", parts: [{ text: userText }] }];
 
-                    // Configurazione corretta del payload per le API REST di Gemini 3.5
+           // Payload essenziale: solo istruzioni e contenuto, nessuna configurazione extra
                     const payload = {
                         systemInstruction: {
                             parts: [
                                 { text: MUSA_SYSTEM_PROMPT }
                             ]
                         },
-                        contents: contents,
-                        generationConfig: {
-                            thinkingConfig: { 
-                                thinkingLevel: "LOW" // Latenza minima per l'avatar
-                            }
-                        }
+                        contents: contents
                     };
 
                     // Chiamata REST diretta (Bypassa i bug della vecchia libreria SDK)
