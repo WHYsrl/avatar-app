@@ -138,8 +138,12 @@ wss.on('connection', (ws) => {
                     chatHistory.push({ role: "user", parts: [{ text: userText }] });
                     chatHistory.push({ role: "model", parts: [{ text: replyText }] });
                     break;
-                } catch (err) {
-                    console.warn(`⚠️ Fallback da ${modelName}...`);
+               } catch (err) {
+                    // Stampa l'errore esatto e nudo e crudo restituito da Google
+                    console.error(`❌ ERRORE CRITICO SU ${modelName}:`);
+                    console.error(`Messaggio: ${err.message}`);
+                    console.error(`Stack: ${err.stack}`);
+                    console.warn(`⚠️ Avvio procedura di Fallback da ${modelName}...`);
                 }
             }
 
